@@ -1,8 +1,10 @@
+import Combine
 import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @State private var isKeyboardVisible = false
 
     var body: some View {
         @Bindable var model = model
@@ -28,10 +30,22 @@ struct RootView: View {
                 }
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             if !model.accounts.accounts.isEmpty {
-                AccountBar()
+                AccountHeader()
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Như app Facebook: ẩn thanh tab khi đang gõ để nhường chỗ cho bàn phím.
+            if let account = model.selectedAccount, !PageTab.tabs(for: account.kind).isEmpty, !isKeyboardVisible {
+                PageTabBar(account: account, activeTab: model.web.state(for: account.id).activeTab)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isKeyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isKeyboardVisible = false
         }
         .sheet(isPresented: $model.isShowingSettings) {
             SettingsView()

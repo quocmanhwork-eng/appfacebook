@@ -15,9 +15,10 @@ Mỗi tài khoản hiển thị **chính trang facebook.com / messenger.com** n�
 | 👥 **Nhiều tài khoản song song** | Mặc định có 4 ô: Facebook 1, Facebook 2, Messenger 1, Messenger 2. Thêm/xóa tùy ý. |
 | 🔒 **Phiên đăng nhập tách biệt** | Mỗi tài khoản có kho cookie/bộ nhớ riêng (`WKWebsiteDataStore(forIdentifier:)`), đăng nhập được lưu lại sau khi tắt app. |
 | 🔗 **Dùng chung phiên (tùy chọn)** | Cho Messenger 1 dùng luôn đăng nhập của Facebook 1 để khỏi đăng nhập hai lần. |
-| ⚡ **Chuyển tài khoản tức thì** | Thanh dưới cùng kiểu Facebook; các trang được giữ trong bộ nhớ nên không phải tải lại. |
+| ⚡ **Chuyển tài khoản tức thì** | Ảnh đại diện các tài khoản ở góc trên như nút chuyển trang cá nhân của Facebook; các trang được giữ trong bộ nhớ nên không phải tải lại. |
+| 📱 **Tab bar như app Facebook** | Trang chủ · Video · Bạn bè · Marketplace · Thông báo · Menu, tự tô sáng theo trang đang xem và ẩn khi đang gõ phím. |
 | 🔴 **Số chưa đọc** | Đọc từ tiêu đề trang (vd. `(3) Facebook`) và hiện huy hiệu đỏ trên từng tài khoản. |
-| 🔔 **Thông báo** | Báo khi một tài khoản khác có thêm tin/thông báo chưa đọc, cập nhật số trên biểu tượng app. |
+| 🔔 **Thông báo, kể cả khi chạy nền** | Báo khi một tài khoản có thêm tin/thông báo chưa đọc, cập nhật số trên biểu tượng app. Khi app ở nền, iOS thỉnh thoảng đánh thức app để kiểm tra tin mới. |
 | 🛡️ **Khóa bằng Face ID / Touch ID** | Che toàn bộ nội dung (kể cả trong màn hình đa nhiệm). |
 | 📞 **Gọi thoại/video, gửi ảnh, tải tệp** | Cấp quyền camera/micro, mở cửa sổ gọi, lưu/chia sẻ tệp đính kèm. |
 | 🌐 **Link ngoài mở trong trình duyệt** | Tự bỏ trang chuyển hướng `l.facebook.com`, chặn trang web tự đẩy sang app Facebook/Messenger chính thức. |
@@ -25,11 +26,14 @@ Mỗi tài khoản hiển thị **chính trang facebook.com / messenger.com** n�
 
 ### Thao tác nhanh
 
-- **Chạm** một tài khoản ở thanh dưới để chuyển sang tài khoản đó.
-- **Chạm lại** tài khoản đang mở: cuộn lên đầu; chạm lần nữa: về trang chủ.
-- **Nhấn giữ** một tài khoản: Về trang chủ · Tải lại · Chỉnh sửa · Đăng xuất.
+- **Chạm ảnh đại diện** ở góc trên để chuyển sang tài khoản đó.
+- **Chạm tên tài khoản đang mở** (góc trên bên trái): danh sách tài khoản, Về trang chủ · Tải lại · Chỉnh sửa · Đăng xuất.
+- **Nhấn giữ ảnh đại diện** của tài khoản khác: các thao tác tương tự cho tài khoản đó.
+- **Chạm lại tab đang mở**: cuộn lên đầu; chạm lần nữa: tải lại.
 - **Vuốt từ mép trái** để quay lại trang trước; **kéo xuống** để tải lại (Facebook).
-- Nút **Menu** (☰): quản lý tài khoản, bật khóa Face ID, thông báo.
+- Nút **⚙︎** (góc trên bên phải): quản lý tài khoản, khóa Face ID, thông báo, kiểm tra tin khi chạy nền.
+
+Tài khoản Messenger không có tab bar dưới cùng vì trang Messenger đã có thanh điều hướng riêng — để dành chỗ cho cuộc trò chuyện.
 
 ## Cài đặt
 
@@ -63,9 +67,11 @@ DuoSocial/
 ├── Web/            WebSession (web view của một tài khoản), WebSessionManager (kho phiên),
 │                   BrowserController (link, popup, tải tệp, quyền), LinkPolicy, UnreadParser,
 │                   PopupController, Presenter, WebViewFactory (User-Agent, script)
-├── Services/       AppLock (Face ID), UnreadNotifier (thông báo, số trên biểu tượng)
-└── Views/          RootView, AccountBar (thanh chuyển tài khoản), SettingsView, AccountEditView…
-DuoSocialTests/     Unit test cho LinkPolicy, UnreadParser, Account, AccountStore
+├── Services/       AppLock (Face ID), UnreadNotifier (thông báo, số trên biểu tượng),
+│                   UnreadBaseline (chống báo trùng), BackgroundRefresh (kiểm tra khi chạy nền)
+└── Views/          RootView, AccountHeader (chuyển tài khoản), PageTabBar (tab kiểu Facebook),
+                    SettingsView, AccountEditView…
+DuoSocialTests/     Unit test cho LinkPolicy, UnreadParser, PageTab, UnreadBaseline, Account, AccountStore
 ```
 
 - **Tách phiên đăng nhập**: mỗi `Account` có một `sessionID` (UUID). Web view của tài khoản dùng
@@ -77,14 +83,18 @@ DuoSocialTests/     Unit test cho LinkPolicy, UnreadParser, Account, AccountStor
   Facebook phục vụ bản web di động đầy đủ. Messenger mặc định dùng giao diện máy tính "vừa màn hình"
   vì bản web di động của Messenger thường bắt cài app.
 - **Trạng thái đăng nhập**: kiểm tra cookie `c_user` (ID người dùng Facebook) trong kho của phiên.
+- **Chống báo trùng**: số chưa đọc "đã biết" của từng tài khoản được lưu lại; chỉ báo khi số tăng. Khi trang
+  đang tải lại, tiêu đề tạm về 0 nên các lần giảm trong lúc đó bị bỏ qua.
 
 ## Giới hạn cần biết
 
 - Đây **không phải ứng dụng chính thức của Meta** và không dùng API riêng của Facebook — nó hiển thị
   trang web thật của Facebook. Mật khẩu chỉ được nhập vào trang của Facebook, ứng dụng không lưu lại.
-- **Thông báo đẩy khi app đã đóng không có**: iOS không cho trang web chạy nền lâu, nên thông báo chỉ
-  hoạt động khi app đang mở hoặc vừa chuyển xuống nền. Muốn nhận thông báo tức thì khi tắt app, vẫn cần
-  app Facebook/Messenger chính thức cho ít nhất một tài khoản.
+- **Thông báo khi chạy nền đến chậm**: chỉ app chính thức của Meta mới nhận được thông báo đẩy tức thì.
+  DuoSocial dùng "Làm mới ứng dụng trong nền" — iOS tự quyết định khi nào đánh thức app (thường vài chục
+  phút tới vài giờ một lần, tùy thói quen dùng máy; không chạy nếu bạn vuốt tắt app hoặc bật Chế độ nguồn điện thấp).
+  Mỗi lần được đánh thức, app tải lại các tài khoản trong ~20 giây để đọc số chưa đọc. Muốn nhận tin tức thì,
+  hãy dùng app Facebook/Messenger chính thức cho tài khoản chính và DuoSocial cho các tài khoản phụ.
 - Số chưa đọc dựa vào tiêu đề trang nên phụ thuộc cách Facebook đặt tiêu đề; có thể không hiện ở một số trang.
 - Facebook có thể thay đổi giao diện web hoặc yêu cầu xác minh (checkpoint) khi đăng nhập ở thiết bị mới — làm theo hướng dẫn trên trang.
 - "Mở sẵn tất cả tài khoản" tốn thêm bộ nhớ; tắt đi trong Menu nếu máy yếu.

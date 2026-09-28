@@ -8,13 +8,14 @@ final class AppSettings {
         static let lockEnabled = "duosocial.settings.lockEnabled"
         static let notificationsEnabled = "duosocial.settings.notificationsEnabled"
         static let preloadAllAccounts = "duosocial.settings.preloadAllAccounts"
+        static let backgroundRefreshEnabled = "duosocial.settings.backgroundRefreshEnabled"
     }
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        defaults.register(defaults: [Keys.preloadAllAccounts: true])
+        defaults.register(defaults: [Keys.preloadAllAccounts: true, Keys.backgroundRefreshEnabled: true])
     }
 
     /// Khóa ứng dụng bằng Face ID / Touch ID / mật mã khi quay lại app.
@@ -39,6 +40,19 @@ final class AppSettings {
         set {
             withMutation(keyPath: \.notificationsEnabled) {
                 defaults.set(newValue, forKey: Keys.notificationsEnabled)
+            }
+        }
+    }
+
+    /// Nhờ iOS thỉnh thoảng đánh thức app ở chế độ nền để kiểm tra tin mới (cần bật thông báo).
+    var backgroundRefreshEnabled: Bool {
+        get {
+            access(keyPath: \.backgroundRefreshEnabled)
+            return defaults.bool(forKey: Keys.backgroundRefreshEnabled)
+        }
+        set {
+            withMutation(keyPath: \.backgroundRefreshEnabled) {
+                defaults.set(newValue, forKey: Keys.backgroundRefreshEnabled)
             }
         }
     }

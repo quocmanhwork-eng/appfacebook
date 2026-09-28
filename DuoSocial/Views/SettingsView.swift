@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
@@ -34,18 +35,29 @@ struct SettingsView: View {
                     Toggle(isOn: notificationsBinding) {
                         Label("Thông báo tin mới", systemImage: "bell.badge.fill")
                     }
+                    Toggle(isOn: backgroundRefreshBinding) {
+                        Label("Kiểm tra tin khi chạy nền", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(!settings.notificationsEnabled)
                     Toggle(isOn: $settings.preloadAllAccounts) {
                         Label("Mở sẵn tất cả tài khoản", systemImage: "bolt.horizontal.fill")
                     }
                 } header: {
                     Text("Bảo mật & thông báo")
                 } footer: {
-                    Text("Thông báo dựa trên số chưa đọc hiện trên tiêu đề trang và chỉ hoạt động khi app đang mở hoặc vừa chuyển xuống nền — iOS không cho trang web chạy nền lâu. \"Mở sẵn\" giúp cả 4 tài khoản cùng cập nhật số chưa đọc nhưng tốn thêm bộ nhớ.")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Thông báo dựa trên số chưa đọc hiện trên tiêu đề trang. Khi app ở nền, iOS thỉnh thoảng đánh thức app để kiểm tra (thường vài chục phút tới vài giờ một lần, tùy thói quen dùng máy) nên thông báo đến chậm hơn app chính thức. \"Mở sẵn\" giúp cả 4 tài khoản cùng cập nhật số chưa đọc nhưng tốn thêm bộ nhớ.")
+                        if settings.notificationsEnabled && settings.backgroundRefreshEnabled && !isSystemBackgroundRefreshAvailable {
+                            Text("\"Làm mới ứng dụng trong nền\" đang tắt. Hãy bật trong Cài đặt > Cài đặt chung > Làm mới ứng dụng trong nền.")
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
 
                 Section {
-                    TipRow(symbol: "hand.tap", text: "Chạm lại tài khoản đang mở để cuộn lên đầu trang, chạm lần nữa để về trang chủ.")
-                    TipRow(symbol: "hand.point.up.left", text: "Nhấn giữ biểu tượng tài khoản để tải lại, chỉnh sửa hoặc đăng xuất.")
+                    TipRow(symbol: "person.crop.circle", text: "Chạm ảnh đại diện ở góc trên để chuyển tài khoản. Chạm tên tài khoản đang mở để xem thêm tùy chọn.")
+                    TipRow(symbol: "hand.point.up.left", text: "Nhấn giữ ảnh đại diện để tải lại, chỉnh sửa hoặc đăng xuất tài khoản đó.")
+                    TipRow(symbol: "hand.tap", text: "Chạm lại tab đang mở để cuộn lên đầu trang, chạm lần nữa để tải lại.")
                     TipRow(symbol: "arrow.left", text: "Vuốt từ mép trái màn hình để quay lại trang trước.")
                     TipRow(symbol: "link", text: "Muốn Messenger dùng luôn đăng nhập của Facebook? Mở tài khoản Messenger và chọn \"Dùng chung phiên\".")
                 } header: {
@@ -137,6 +149,17 @@ struct SettingsView: View {
                 }
             }
         )
+    }
+
+    private var backgroundRefreshBinding: Binding<Bool> {
+        Binding(
+            get: { model.settings.backgroundRefreshEnabled },
+            set: { model.setBackgroundRefreshEnabled($0) }
+        )
+    }
+
+    private var isSystemBackgroundRefreshAvailable: Bool {
+        UIApplication.shared.backgroundRefreshStatus == .available
     }
 
     private static var appVersion: String {

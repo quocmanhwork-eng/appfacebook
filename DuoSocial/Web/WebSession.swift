@@ -9,10 +9,13 @@ final class WebSession: BrowserController {
     let kind: AccountKind
     let signature: String
     let startURL: URL
-    let createdAt = Date()
 
     private weak var manager: WebSessionManager?
     private var observations: [NSKeyValueObservation] = []
+    private var lastNavigationEvent = Date.distantPast
+
+    /// Sau khi bắt đầu/kết thúc điều hướng, trang Facebook cần vài giây để cập nhật số chưa đọc trên tiêu đề.
+    private static let settleInterval: TimeInterval = 6
 
     init(account: Account, dataStore: WKWebsiteDataStore, manager: WebSessionManager) {
         accountID = account.id
@@ -28,26 +31,37 @@ final class WebSession: BrowserController {
         startObserving()
     }
 
+    /// Trang đang tải hoặc vừa tải xong: số chưa đọc trên tiêu đề có thể tạm thời sai (thường về 0).
+    var isSettling: Bool {
+        webView.isLoading || Date().timeIntervalSince(lastNavigationEvent) < Self.settleInterval
+    }
+
     func loadStart() {
-        webView.load(URLRequest(url: startURL))
+        load(startURL)
     }
 
     func reloadPage() {
         if webView.url == nil {
             loadStart()
         } else {
+            lastNavigationEvent = Date()
             webView.reload()
         }
     }
 
-    /// Chạm lại vào tài khoản đang mở: cuộn lên đầu, hoặc về trang chủ nếu đã ở đầu trang (như app Facebook).
+    func open(_ tab: PageTab) {
+        report { $0.activeTab = tab }
+        load(tab.url(base: PageTab.baseURL(current: webView.url, start: startURL)))
+    }
+
+    /// Chạm lại tab/tài khoản đang mở: cuộn lên đầu, hoặc tải lại nếu đã ở đầu trang (như app Facebook).
     func handleReselect() {
         let scrollView = webView.scrollView
         let topOffset = -scrollView.adjustedContentInset.top
         if scrollView.contentOffset.y > topOffset + 1 {
             scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: topOffset), animated: true)
-        } else if kind == .facebook {
-            loadStart()
+        } else {
+            reloadPage()
         }
     }
 
@@ -63,12 +77,15 @@ final class WebSession: BrowserController {
     // MARK: - Hooks
 
     override func navigationStarted() {
+        lastNavigationEvent = Date()
         report { $0.loadError = nil }
     }
 
     override func navigationFinished() {
+        lastNavigationEvent = Date()
         webView.scrollView.refreshControl?.endRefreshing()
         refreshLoginState()
+        resyncUnreadAfterSettling()
     }
 
     override func navigationFailed(_ error: Error) {
@@ -78,6 +95,11 @@ final class WebSession: BrowserController {
     }
 
     // MARK: - Private
+
+    private func load(_ url: URL) {
+        lastNavigationEvent = Date()
+        webView.load(URLRequest(url: url))
+    }
 
     private func installRefreshControl() {
         let control = UIRefreshControl()
@@ -94,6 +116,11 @@ final class WebSession: BrowserController {
             webView.observe(\.title, options: [.new]) { [weak self] webView, _ in
                 MainActor.assumeIsolated {
                     self?.titleDidChange(webView.title)
+                }
+            },
+            webView.observe(\.url, options: [.new]) { [weak self] webView, _ in
+                MainActor.assumeIsolated {
+                    self?.urlDidChange(webView.url)
                 }
             },
             webView.observe(\.estimatedProgress, options: [.new]) { [weak self] webView, _ in
@@ -115,12 +142,31 @@ final class WebSession: BrowserController {
     }
 
     private func titleDidChange(_ title: String?) {
-        let unread = UnreadParser.unreadCount(fromTitle: title)
+        report { $0.title = title ?? "" }
+        if let unread = UnreadParser.unreadCount(fromTitle: title) {
+            manager?.unreadObserved(from: self, count: unread)
+        }
+    }
+
+    private func urlDidChange(_ url: URL?) {
+        let tab = PageTab.matching(url)
         report { state in
-            state.title = title ?? ""
-            if let unread {
-                state.unreadCount = unread
+            state.url = url
+            if let tab {
+                state.activeTab = tab
             }
+        }
+    }
+
+    /// Số chưa đọc giảm trong lúc trang đang tải bị bỏ qua; khi trang đã ổn định thì báo lại số hiện tại
+    /// để số "đã biết" giảm theo (vd. người dùng vừa đọc tin).
+    private func resyncUnreadAfterSettling() {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.settleInterval + 1))
+            guard let self, !self.isSettling,
+                  let unread = UnreadParser.unreadCount(fromTitle: self.webView.title)
+            else { return }
+            self.manager?.unreadObserved(from: self, count: unread)
         }
     }
 

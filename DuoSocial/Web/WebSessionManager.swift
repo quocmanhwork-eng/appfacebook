@@ -13,6 +13,9 @@ struct PageState: Equatable {
     var isLoggedIn: Bool?
     var userID: String?
     var loadError: String?
+    var url: URL?
+    /// Tab dưới cùng đang được tô sáng (giữ nguyên khi mở trang không thuộc tab nào, vd. trang cá nhân).
+    var activeTab: PageTab?
 }
 
 /// Quản lý các web view của tài khoản và kho dữ liệu (phiên đăng nhập) tương ứng.
@@ -22,12 +25,9 @@ final class WebSessionManager {
     private(set) var sessions: [UUID: WebSession] = [:]
     private(set) var pageStates: [UUID: PageState] = [:]
 
-    /// (accountID, số cũ, số mới, đang trong lần tải đầu tiên)
-    @ObservationIgnored var onUnreadChange: ((UUID, Int, Int, Bool) -> Void)?
+    /// Gọi mỗi khi đọc được số chưa đọc từ tiêu đề trang: (accountID, số chưa đọc, trang đang tải/ổn định).
+    @ObservationIgnored var onUnreadObserved: ((UUID, Int, Bool) -> Void)?
     @ObservationIgnored private var dataStores: [UUID: WKWebsiteDataStore] = [:]
-
-    /// Trong khoảng này sau khi mở phiên, số chưa đọc tăng lên được coi là dữ liệu cũ, không gửi thông báo.
-    private static let initialLoadGracePeriod: TimeInterval = 10
 
     func session(for accountID: UUID) -> WebSession? {
         sessions[accountID]
@@ -95,10 +95,23 @@ final class WebSessionManager {
         mutate(&next)
         guard next != previous else { return }
         pageStates[session.accountID] = next
+    }
 
-        if next.unreadCount != previous.unreadCount {
-            let isInitialLoad = Date().timeIntervalSince(session.createdAt) < Self.initialLoadGracePeriod
-            onUnreadChange?(session.accountID, previous.unreadCount, next.unreadCount, isInitialLoad)
+    func unreadObserved(from session: WebSession, count: Int) {
+        guard sessions[session.accountID] === session else { return }
+        update(from: session) { $0.unreadCount = count }
+        onUnreadObserved?(session.accountID, count, session.isSettling)
+    }
+
+    /// Chờ tới khi mọi trang tải xong và tiêu đề kịp cập nhật số chưa đọc (dùng khi chạy nền).
+    func waitUntilSettled(timeout: Duration) async {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline {
+            try? await Task.sleep(for: .seconds(1))
+            if sessions.values.allSatisfy({ !$0.isSettling }) {
+                return
+            }
         }
     }
 }

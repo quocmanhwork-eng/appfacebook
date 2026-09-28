@@ -12,6 +12,8 @@ struct DuoSocialApp: App {
     }
 
     var body: some Scene {
+        let model = model
+
         WindowGroup {
             if Self.isRunningUnitTests {
                 // Không tải Facebook khi app chỉ làm "host" cho unit test.
@@ -20,6 +22,9 @@ struct DuoSocialApp: App {
                 RootView()
                     .environment(model)
             }
+        }
+        .backgroundTask(.appRefresh(BackgroundRefresh.taskIdentifier)) {
+            await model.performBackgroundRefresh()
         }
     }
 

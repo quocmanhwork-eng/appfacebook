@@ -17,7 +17,8 @@ final class AppModel {
     var isShowingSettings = false
     var settingsPath: [UUID] = []
 
-    @ObservationIgnored private var isSceneActive = true
+    @ObservationIgnored private var unreadBaseline: UnreadBaseline
+    @ObservationIgnored private var isSceneActive = false
     @ObservationIgnored private var didBootstrap = false
 
     private static let selectedAccountKey = "duosocial.selectedAccountID"
@@ -33,10 +34,11 @@ final class AppModel {
         self.lock = AppLock()
         self.notifier = UnreadNotifier()
         self.defaults = defaults
+        self.unreadBaseline = UnreadBaseline(defaults: defaults)
         self.selectedAccountID = savedID.flatMap { accounts.account(with: $0)?.id } ?? accounts.accounts.first?.id
 
-        web.onUnreadChange = { [weak self] accountID, oldValue, newValue, isInitialLoad in
-            self?.handleUnreadChange(accountID: accountID, from: oldValue, to: newValue, isInitialLoad: isInitialLoad)
+        web.onUnreadObserved = { [weak self] accountID, count, isSettling in
+            self?.handleUnreadObserved(accountID: accountID, count: count, isSettling: isSettling)
         }
         NotificationRouter.shared.onOpenAccount = { [weak self] accountID in
             self?.isShowingSettings = false
@@ -89,12 +91,16 @@ final class AppModel {
         activate(accountID)
     }
 
-    /// Chạm vào một tài khoản trên thanh dưới cùng.
-    func tapAccount(_ accountID: UUID) {
-        if selectedAccountID == accountID {
-            web.session(for: accountID)?.handleReselect()
+    /// Chạm một tab dưới cùng: mở trang của tab, hoặc cuộn lên đầu/tải lại nếu đang ở đúng tab đó.
+    func openTab(_ tab: PageTab, in account: Account) {
+        guard let session = web.session(for: account.id) else {
+            select(account.id)
+            return
+        }
+        if PageTab.matching(session.webView.url) == tab {
+            session.handleReselect()
         } else {
-            select(accountID)
+            session.open(tab)
         }
     }
 
@@ -137,6 +143,8 @@ final class AppModel {
     func delete(_ account: Account) {
         accounts.remove(id: account.id)
         web.discardSession(for: account.id)
+        unreadBaseline.remove(account.id)
+        unreadBaseline.save(to: defaults)
         if selectedAccountID == account.id {
             if let next = accounts.accounts.first {
                 select(next.id)
@@ -187,14 +195,48 @@ final class AppModel {
         guard enabled else {
             settings.notificationsEnabled = false
             notifier.setBadge(0)
+            BackgroundRefresh.cancel()
             return true
         }
         let granted = await notifier.requestAuthorization()
         settings.notificationsEnabled = granted
         if granted {
             updateBadge()
+            scheduleBackgroundRefreshIfNeeded()
         }
         return granted
+    }
+
+    func setBackgroundRefreshEnabled(_ enabled: Bool) {
+        settings.backgroundRefreshEnabled = enabled
+        if enabled {
+            scheduleBackgroundRefreshIfNeeded()
+        } else {
+            BackgroundRefresh.cancel()
+        }
+    }
+
+    // MARK: - Chạy nền
+
+    /// iOS đánh thức app ở chế độ nền: tải lại các tài khoản để tiêu đề trang cập nhật số chưa đọc.
+    /// Thông báo được gửi qua `handleUnreadObserved` như khi app đang mở.
+    func performBackgroundRefresh() async {
+        guard settings.notificationsEnabled, settings.backgroundRefreshEnabled else { return }
+        BackgroundRefresh.schedule()
+
+        let alreadyOpen = Set(web.sessions.keys)
+        for account in accounts.accounts {
+            web.ensureSession(for: account)
+        }
+        for accountID in alreadyOpen {
+            web.session(for: accountID)?.reloadPage()
+        }
+        await web.waitUntilSettled(timeout: BackgroundRefresh.pageLoadTimeout)
+    }
+
+    private func scheduleBackgroundRefreshIfNeeded() {
+        guard settings.notificationsEnabled, settings.backgroundRefreshEnabled else { return }
+        BackgroundRefresh.schedule()
     }
 
     // MARK: - Vòng đời
@@ -206,6 +248,7 @@ final class AppModel {
             lock.sceneDidBecomeActive()
         case .background:
             isSceneActive = false
+            scheduleBackgroundRefreshIfNeeded()
             if settings.lockEnabled {
                 lock.lock()
             }
@@ -214,16 +257,21 @@ final class AppModel {
         }
     }
 
-    private func handleUnreadChange(accountID: UUID, from oldValue: Int, to newValue: Int, isInitialLoad: Bool) {
+    private func handleUnreadObserved(accountID: UUID, count: Int, isSettling: Bool) {
         updateBadge()
-        guard settings.notificationsEnabled, newValue > oldValue, !isInitialLoad,
-              let account = accounts.account(with: accountID)
-        else { return }
+
+        let previousBaseline = unreadBaseline
+        let shouldAlert = unreadBaseline.observe(count, for: accountID, isSettling: isSettling)
+        if unreadBaseline != previousBaseline {
+            unreadBaseline.save(to: defaults)
+        }
+
+        guard shouldAlert, settings.notificationsEnabled, let account = accounts.account(with: accountID) else { return }
         // Không báo cho tài khoản người dùng đang xem.
         if isSceneActive && selectedAccountID == accountID {
             return
         }
-        notifier.notifyUnread(for: account, count: newValue)
+        notifier.notifyUnread(for: account, count: count)
     }
 
     private func updateBadge() {

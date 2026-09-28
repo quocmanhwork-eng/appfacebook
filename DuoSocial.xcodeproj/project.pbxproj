@@ -21,9 +21,22 @@
 		D0501A000000000000000007 /* DuoSocialTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DuoSocialTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D0501A00000000000000001B /* Exceptions for "DuoSocial" folder in "DuoSocial" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D0501A000000000000000008 /* DuoSocial */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D0501A000000000000000004 /* DuoSocial */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D0501A00000000000000001B /* Exceptions for "DuoSocial" folder in "DuoSocial" target */,
+			);
 			path = DuoSocial;
 			sourceTree = "<group>";
 		};
@@ -330,6 +343,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DuoSocial/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DuoSocial;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Cho phép dùng camera để gọi video, chụp ảnh và quay video gửi lên Facebook/Messenger.";
@@ -366,6 +380,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DuoSocial/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DuoSocial;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Cho phép dùng camera để gọi video, chụp ảnh và quay video gửi lên Facebook/Messenger.";
