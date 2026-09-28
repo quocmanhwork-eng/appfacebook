@@ -41,6 +41,23 @@ Yêu cầu: **iOS 17 trở lên** (API kho dữ liệu web tách biệt chỉ c�
 
 ### Cách 1 — Có máy Mac + Xcode 16 trở lên
 
+**Nhanh nhất — một lệnh:**
+
+1. Cài Xcode từ App Store, mở Xcode một lần, vào **Xcode → Settings… → Accounts** và đăng nhập Apple ID.
+2. Cắm iPhone vào Mac, mở khóa và chọn **Tin cậy máy tính này**.
+3. Mở Terminal và chạy:
+
+   ```bash
+   git clone -b claude/ios-multi-account-facebook-messenger-7tz44p https://github.com/quocmanhwork-eng/appfacebook.git
+   cd appfacebook
+   ./scripts/install-on-iphone.sh
+   ```
+
+   Script tự tìm Team ID, đặt Bundle ID riêng (`com.<tên-user-mac>.duosocial`), build, cài và mở app.
+   Nếu iOS chưa cho mở app, làm bước 4 bên dưới rồi mở DuoSocial trên màn hình chính.
+
+**Hoặc làm thủ công trong Xcode:**
+
 1. Mở `DuoSocial.xcodeproj` bằng Xcode.
 2. Chọn target **DuoSocial** → tab **Signing & Capabilities**:
    - **Team**: chọn Apple ID của bạn (tài khoản miễn phí cũng được).
