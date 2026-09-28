@@ -53,13 +53,13 @@ struct AccountTabButton: View {
         } label: {
             VStack(spacing: 3) {
                 AccountAvatar(account: account, size: 32)
+                    .opacity(isSelected ? 1 : 0.75)
                     .overlay(alignment: .topTrailing) {
                         if state.unreadCount > 0 {
                             UnreadBadge(count: state.unreadCount)
                                 .offset(x: 10, y: -6)
                         }
                     }
-                    .opacity(isSelected ? 1 : 0.75)
                 Text(account.name)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
