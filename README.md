@@ -53,7 +53,14 @@ Yêu cầu: **iOS 17 trở lên** (API kho dữ liệu web tách biệt chỉ c�
    ./scripts/install-on-iphone.sh
    ```
 
-   Script tự tìm Team ID, đặt Bundle ID riêng (`com.<tên-user-mac>.duosocial`), build, cài và mở app.
+   Script tự tìm Team ID, đặt Bundle ID riêng (`com.duosocial.<team id>`), build, cài và mở app.
+   - Nếu Xcode chưa lưu Team ID (hay gặp khi vừa thêm Apple ID), script mở dự án trong Xcode: chọn
+     **DuoSocial → TARGETS: DuoSocial → Signing & Capabilities → Team → "Tên bạn (Personal Team)"**,
+     rồi quay lại Terminal bấm Enter.
+   - Script kiểm tra **Chế độ nhà phát triển** trên iPhone và hướng dẫn bật nếu đang tắt.
+   - Team ID và Bundle ID được nhớ trong `.install-config`, nên khi cài lại sau 7 ngày các tài khoản vẫn còn.
+   - Vẫn lỗi? Chạy `python3 scripts/find-team-id.py --diagnose` và gửi kết quả.
+
    Nếu iOS chưa cho mở app, làm bước 4 bên dưới rồi mở DuoSocial trên màn hình chính.
 
 **Hoặc làm thủ công trong Xcode:**

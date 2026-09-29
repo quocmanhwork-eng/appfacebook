@@ -13,3 +13,4 @@ build/
 
 # Python
 __pycache__/
+.install-config
