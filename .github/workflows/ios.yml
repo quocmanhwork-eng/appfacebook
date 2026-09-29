@@ -1,0 +1,103 @@
+name: iOS
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-scripts:
+    name: Web script tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test native-feel.js
+        run: |
+          npm install --no-save --no-audit --no-fund jsdom@24
+          node scripts/tests/native-feel.test.js
+
+  test:
+    name: Build & unit test
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Pick iPhone simulator
+        id: simulator
+        run: |
+          SDK_VERSION=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          echo "iOS Simulator SDK: $SDK_VERSION"
+          UDID=$(xcrun simctl list devices available --json | SDK_VERSION="$SDK_VERSION" python3 -c '
+          import json, os, sys
+
+          def version(text):
+              return tuple(int(part) for part in text.replace("-", ".").split(".") if part.isdigit())
+
+          sdk = version(os.environ["SDK_VERSION"])
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = [r for r in devices if ".iOS-" in r and version(r.split(".iOS-")[1]) <= sdk]
+          for runtime in sorted(runtimes, key=lambda r: version(r.split(".iOS-")[1]), reverse=True):
+              for device in devices[runtime]:
+                  if device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      sys.exit(0)
+          sys.exit("No iPhone simulator found")
+          ')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build & test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project DuoSocial.xcodeproj \
+            -scheme DuoSocial \
+            -destination "id=${{ steps.simulator.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO
+
+  ipa:
+    name: Unsigned IPA (for sideloading)
+    runs-on: macos-15
+    needs: test
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Archive (no code signing)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project DuoSocial.xcodeproj \
+            -scheme DuoSocial \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/DuoSocial.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          cd "$RUNNER_TEMP"
+          mkdir -p Payload
+          cp -R DuoSocial.xcarchive/Products/Applications/DuoSocial.app Payload/
+          zip -qry DuoSocial-unsigned.ipa Payload
+          ls -lh DuoSocial-unsigned.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DuoSocial-unsigned-ipa
+          path: ${{ runner.temp }}/DuoSocial-unsigned.ipa
+          if-no-files-found: error

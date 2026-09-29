@@ -1,0 +1,17 @@
+# Xcode
+xcuserdata/
+DerivedData/
+build/
+*.xcresult
+*.xcarchive
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+.install-config
+node_modules/
