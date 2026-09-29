@@ -24,22 +24,31 @@ step() { printf '\n\033[1;34m▶ %s\033[0m\n' "$1"; }
 note() { printf '\033[0;33m%s\033[0m\n' "$1"; }
 fail() { printf '\n\033[1;31m✖ %s\033[0m\n' "$1" >&2; exit 1; }
 pause() { read -r -p "Làm xong thì quay lại đây và bấm Enter để tiếp tục… " _; }
+first_line() { awk 'NR == 1'; }
+
+# Không bao giờ dừng im lặng: báo dòng và lệnh bị lỗi.
+trap 'printf "\n\033[1;31m✖ Lỗi không mong đợi ở dòng %s: %s\033[0m\nHãy chụp màn hình và gửi người hỗ trợ.\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
 # Giá trị đã lưu từ lần trước (biến môi trường vẫn được ưu tiên).
 SAVED_TEAM_ID=""
 SAVED_BUNDLE_ID=""
 if [ -f "$CONFIG_FILE" ]; then
-    SAVED_TEAM_ID=$(sed -n 's/^TEAM_ID=//p' "$CONFIG_FILE" | head -1)
-    SAVED_BUNDLE_ID=$(sed -n 's/^BUNDLE_ID=//p' "$CONFIG_FILE" | head -1)
+    SAVED_TEAM_ID=$(sed -n 's/^TEAM_ID=//p' "$CONFIG_FILE" | first_line)
+    SAVED_BUNDLE_ID=$(sed -n 's/^BUNDLE_ID=//p' "$CONFIG_FILE" | first_line)
 fi
 
 # --- 1. Kiểm tra Xcode -------------------------------------------------------
 step "Kiểm tra Xcode"
 command -v xcodebuild >/dev/null 2>&1 || fail "Chưa có Xcode. Cài Xcode từ App Store rồi mở Xcode một lần."
-if ! xcode-select -p 2>/dev/null | grep -q "Xcode"; then
+DEVELOPER_DIR_PATH=$(xcode-select -p 2>/dev/null || true)
+if [[ "$DEVELOPER_DIR_PATH" != *Xcode* ]]; then
     fail "Đang dùng Command Line Tools thay vì Xcode. Chạy: sudo xcode-select -s /Applications/Xcode.app"
 fi
-XCODE_VERSION=$(xcodebuild -version | head -1)
+if ! XCODE_INFO=$(xcodebuild -version 2>&1); then
+    fail "Xcode chưa sẵn sàng: $XCODE_INFO
+Mở Xcode một lần và đồng ý điều khoản (hoặc chạy: sudo xcodebuild -license accept), rồi chạy lại."
+fi
+XCODE_VERSION=$(first_line <<<"$XCODE_INFO")
 XCODE_MAJOR=$(awk '{ split($2, v, "."); print v[1] }' <<<"$XCODE_VERSION")
 [ "${XCODE_MAJOR:-0}" -ge 16 ] || fail "Cần Xcode 16 trở lên (đang có $XCODE_VERSION)."
 echo "$XCODE_VERSION"
@@ -58,7 +67,8 @@ TEAM_ID="${TEAM_ID:-$SAVED_TEAM_ID}"
 if [ -n "$TEAM_ID" ]; then
     echo "Team ID: $TEAM_ID"
 else
-    TEAM_LINE=$(find_team 2>/dev/null | head -1 || true)
+    TEAM_LINE=$(find_team 2>/dev/null || true)
+    TEAM_LINE=$(first_line <<<"$TEAM_LINE")
     if [ -z "$TEAM_LINE" ]; then
         cat <<'EOF'
 Xcode chưa lưu Team ID ở chỗ script đọc được (thường gặp khi vừa thêm Apple ID).
@@ -70,7 +80,8 @@ Script sẽ mở dự án trong Xcode — bạn chỉ cần chọn Team một l�
 EOF
         open DuoSocial.xcodeproj
         pause
-        TEAM_LINE=$(find_team 2>/dev/null | head -1 || true)
+        TEAM_LINE=$(find_team 2>/dev/null || true)
+        TEAM_LINE=$(first_line <<<"$TEAM_LINE")
     fi
     if [ -z "$TEAM_LINE" ]; then
         echo
@@ -91,7 +102,7 @@ printf 'TEAM_ID=%s\nBUNDLE_ID=%s\n' "$TEAM_ID" "$BUNDLE_ID" >"$CONFIG_FILE"
 
 # --- 4. Tìm iPhone đang cắm ----------------------------------------------------
 step "Tìm iPhone"
-DEVICES_JSON=$(mktemp -t duosocial-devices)
+DEVICES_JSON=$(mktemp "${TMPDIR:-/tmp}/duosocial-devices.XXXXXX")
 trap 'rm -f "$DEVICES_JSON"' EXIT
 
 # In: udid<TAB>tên<TAB>phiên bản iOS<TAB>trạng thái Developer Mode. Không thấy: in danh sách thiết bị ra stderr.
