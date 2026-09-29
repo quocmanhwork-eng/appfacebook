@@ -2,6 +2,15 @@ import Observation
 import SwiftUI
 import UIKit
 
+/// Màn hình dạng sheet đang mở.
+enum AppSheet: String, Identifiable {
+    /// Danh sách tài khoản (chạm tab ảnh đại diện).
+    case accounts
+    case settings
+
+    var id: String { rawValue }
+}
+
 /// Trạng thái gốc của ứng dụng: tài khoản, web view, cài đặt, khóa và thông báo.
 @Observable
 @MainActor
@@ -14,7 +23,7 @@ final class AppModel {
     private let defaults: UserDefaults
 
     private(set) var selectedAccountID: UUID?
-    var isShowingSettings = false
+    var activeSheet: AppSheet?
     var settingsPath: [UUID] = []
 
     @ObservationIgnored private var unreadBaseline: UnreadBaseline
@@ -42,7 +51,7 @@ final class AppModel {
             self?.handleUnreadObserved(accountID: accountID, count: count, isSettling: isSettling)
         }
         NotificationRouter.shared.onOpenAccount = { [weak self] accountID in
-            self?.isShowingSettings = false
+            self?.activeSheet = nil
             self?.select(accountID)
         }
         if settings.lockEnabled {
@@ -98,7 +107,8 @@ final class AppModel {
             select(account.id)
             return
         }
-        if PageTab.matching(session.webView.url) == tab {
+        let isCurrentTab = tab == .chats ? session.isShowingStartPage : PageTab.matching(session.webView.url) == tab
+        if isCurrentTab {
             session.handleReselect()
         } else {
             session.open(tab)
@@ -120,7 +130,11 @@ final class AppModel {
 
     func openSettings(editing accountID: UUID? = nil) {
         settingsPath = accountID.map { [$0] } ?? []
-        isShowingSettings = true
+        activeSheet = .settings
+    }
+
+    func openAccountSwitcher() {
+        activeSheet = .accounts
     }
 
     // MARK: - Quản lý tài khoản

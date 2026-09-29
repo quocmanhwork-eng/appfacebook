@@ -37,6 +37,10 @@
   const APP_LINK =
     /^(itms-apps?|itms-appss|fb|fb-messenger|fbapi|fb-messenger-api|fbauth2?):|apps\.apple\.com|itunes\.apple\.com|\/mobile\/messenger|messenger\.com\/(download|mobile)|\/(download|install|get)[_-]?app/i;
 
+  // Nút mời mở/tải app chính thức, nhận ra qua chữ hiển thị (Facebook thường dùng nút JavaScript, không phải link).
+  const APP_BUTTON_TEXT =
+    /^(mở ứng dụng|mở trong ứng dụng|mở app|mở bằng ứng dụng|dùng ứng dụng|sử dụng ứng dụng|tải ứng dụng|tải xuống ứng dụng|cài đặt ứng dụng|tiếp tục trong ứng dụng|open app|open in app|open the app|use app|use the app|get app|get the app|install app|download app|continue in app|open facebook app|open messenger)$/i;
+
   // Các tab của Facebook: nhận ra qua đường dẫn hoặc nhãn (tiếng Anh/Việt).
   const TABS = [
     ['home', ['home', 'trang chủ', 'bảng feed', 'feed'], [/^\/(home\.php)?$/]],
@@ -126,21 +130,39 @@
     return null;
   };
 
-  // Banner/thanh nổi mời tải app: ẩn vùng cố định (fixed/sticky) nhỏ chứa link tải app.
+  // Ẩn thanh nổi (fixed/sticky) nhỏ chứa phần tử; không đụng nội dung bình thường hay lớp phủ toàn màn hình.
+  const hideFloatingAncestor = (element, reason) => {
+    let node = element;
+    for (let depth = 0; node && node !== document.body && depth < 12; depth += 1, node = node.parentElement) {
+      const position = getComputedStyle(node).position;
+      if (position !== 'fixed' && position !== 'sticky') continue;
+      const rect = node.getBoundingClientRect();
+      if (rect.height > 0 && rect.height < 240 && !node.hasAttribute(HIDDEN_ATTR)) {
+        mark(node, reason);
+        return true;
+      }
+      return false;
+    }
+    return false;
+  };
+
+  // Banner/nút nổi mời mở hoặc tải app chính thức.
   const hideAppBanners = () => {
+    let found = false;
     const links = document.querySelectorAll('a[href]');
     for (let index = 0; index < links.length; index += 1) {
       const link = links[index];
-      if (!APP_LINK.test(link.getAttribute('href') || '')) continue;
-      let node = link;
-      for (let depth = 0; node && node !== document.body && depth < 8; depth += 1, node = node.parentElement) {
-        const position = getComputedStyle(node).position;
-        if (position !== 'fixed' && position !== 'sticky') continue;
-        const rect = node.getBoundingClientRect();
-        if (rect.height > 0 && rect.height < 240) mark(node, 'app-banner');
-        break;
-      }
+      if (APP_LINK.test(link.getAttribute('href') || '')) found = hideFloatingAncestor(link, 'app-banner') || found;
     }
+    const buttons = document.querySelectorAll('a, button, [role="button"], [role="link"]');
+    for (let index = 0; index < buttons.length; index += 1) {
+      const button = buttons[index];
+      if (button.childElementCount > 6) continue;
+      const text = (button.textContent || '').trim().replace(/\s+/g, ' ');
+      if (text.length === 0 || text.length > 40 || !APP_BUTTON_TEXT.test(text)) continue;
+      found = hideFloatingAncestor(button, 'app-button') || found;
+    }
+    return found;
   };
 
   let scheduled = false;
@@ -150,17 +172,16 @@
     scheduled = false;
     try {
       addStyle();
-      hideAppBanners();
+      let found = hideAppBanners();
       if (config.hideWebTabBar && !(api.tabRow && api.tabRow.isConnected)) {
         const row = findWebTabRow();
         if (row) {
           api.tabRow = row;
-          misses = 0;
           mark(row, 'web-tab-bar');
-        } else {
-          misses += 1;
+          found = true;
         }
       }
+      misses = found ? 0 : misses + 1;
     } catch (error) {
       // Không bao giờ làm hỏng trang vì phần trang trí này.
     }
@@ -178,6 +199,23 @@
     api.hidden = [];
     api.tabRow = null;
   };
+
+  // Facebook là ứng dụng một trang: khi chuyển trang thì quét lại ngay, không chờ nhịp chậm.
+  const onRouteChange = () => {
+    misses = 0;
+    scheduled = false;
+    schedule();
+  };
+  for (const method of ['pushState', 'replaceState']) {
+    const original = history[method];
+    if (typeof original !== 'function') continue;
+    history[method] = function (...args) {
+      const result = original.apply(this, args);
+      onRouteChange();
+      return result;
+    };
+  }
+  window.addEventListener('popstate', onRouteChange);
 
   addStyle();
   const start = () => {

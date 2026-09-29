@@ -15,7 +15,7 @@ Mỗi tài khoản hiển thị **chính trang facebook.com / messenger.com** n�
 | 👥 **Nhiều tài khoản song song** | Mặc định có 4 ô: Facebook 1, Facebook 2, Messenger 1, Messenger 2. Thêm/xóa tùy ý. |
 | 🔒 **Phiên đăng nhập tách biệt** | Mỗi tài khoản có kho cookie/bộ nhớ riêng (`WKWebsiteDataStore(forIdentifier:)`), đăng nhập được lưu lại sau khi tắt app. |
 | 🔗 **Dùng chung phiên (tùy chọn)** | Cho Messenger 1 dùng luôn đăng nhập của Facebook 1 để khỏi đăng nhập hai lần. |
-| ⚡ **Chuyển tài khoản tức thì** | Ảnh đại diện các tài khoản ở góc trên như nút chuyển trang cá nhân của Facebook; các trang được giữ trong bộ nhớ nên không phải tải lại. |
+| ⚡ **Chuyển tài khoản tức thì** | Tab ảnh đại diện ở cuối thanh dưới (như tab Menu của app Facebook); các trang được giữ trong bộ nhớ nên không phải tải lại. |
 | 📱 **Tab bar như app Facebook** | Trang chủ · Video · Bạn bè · Marketplace · Thông báo · Menu, tự tô sáng theo trang đang xem và ẩn khi đang gõ phím. |
 | 🔴 **Số chưa đọc** | Đọc từ tiêu đề trang (vd. `(3) Facebook`) và hiện huy hiệu đỏ trên từng tài khoản. |
 | 🔔 **Thông báo, kể cả khi chạy nền** | Báo khi một tài khoản có thêm tin/thông báo chưa đọc, cập nhật số trên biểu tượng app. Khi app ở nền, iOS thỉnh thoảng đánh thức app để kiểm tra tin mới. |
@@ -27,14 +27,15 @@ Mỗi tài khoản hiển thị **chính trang facebook.com / messenger.com** n�
 
 ### Thao tác nhanh
 
-- **Chạm ảnh đại diện** ở góc trên để chuyển sang tài khoản đó.
-- **Chạm tên tài khoản đang mở** (góc trên bên trái): danh sách tài khoản, Về trang chủ · Tải lại · Chỉnh sửa · Đăng xuất.
-- **Nhấn giữ ảnh đại diện** của tài khoản khác: các thao tác tương tự cho tài khoản đó.
+- **Tab cuối (ảnh đại diện + tên tài khoản)**: chạm để mở danh sách tài khoản; **nhấn giữ** để chuyển nhanh.
+  Huy hiệu đỏ trên tab này là số chưa đọc của các tài khoản *khác*.
+- Trong danh sách tài khoản, **nhấn giữ** một tài khoản: Về trang chủ · Tải lại · Chỉnh sửa · Đăng xuất.
 - **Chạm lại tab đang mở**: cuộn lên đầu; chạm lần nữa: tải lại.
 - **Vuốt từ mép trái** để quay lại trang trước; **kéo xuống** để tải lại (Facebook).
-- Nút **⚙︎** (góc trên bên phải): quản lý tài khoản, khóa Face ID, thông báo, kiểm tra tin khi chạy nền.
+- **Cài đặt** (trong danh sách tài khoản): khóa Face ID, thông báo, kiểm tra tin khi chạy nền, giao diện.
 
-Tài khoản Messenger không có tab bar dưới cùng vì trang Messenger đã có thanh điều hướng riêng — để dành chỗ cho cuộc trò chuyện.
+Tài khoản Facebook có thanh tab Trang chủ · Video · Bạn bè · Marketplace · Thông báo; Menu của Facebook nằm ở nút ≡ trên trang.
+Tài khoản Messenger chỉ có tab Đoạn chat để dành chỗ cho cuộc trò chuyện.
 
 ## Cài đặt
 
@@ -94,7 +95,7 @@ DuoSocial/
 │                   PopupController, Presenter, WebViewFactory (User-Agent, script)
 ├── Services/       AppLock (Face ID), UnreadNotifier (thông báo, số trên biểu tượng),
 │                   UnreadBaseline (chống báo trùng), BackgroundRefresh (kiểm tra khi chạy nền)
-└── Views/          RootView, AccountHeader (chuyển tài khoản), PageTabBar (tab kiểu Facebook),
+└── Views/          RootView, PageTabBar (tab kiểu Facebook + tab tài khoản), AccountSwitcherView,
                     SettingsView, AccountEditView…
 DuoSocialTests/     Unit test cho LinkPolicy, UnreadParser, PageTab, UnreadBaseline, Account, AccountStore
 ```

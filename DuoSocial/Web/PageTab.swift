@@ -1,13 +1,17 @@
 import Foundation
 
-/// Các tab dưới cùng của một tài khoản Facebook, giống thanh tab của app Facebook.
+/// Các tab dưới cùng của một tài khoản, giống thanh tab của app Facebook/Messenger.
+/// Tab cuối của thanh luôn là ảnh đại diện tài khoản (chuyển tài khoản), không nằm trong enum này.
 enum PageTab: String, CaseIterable, Identifiable, Sendable {
     case home
     case video
     case friends
     case marketplace
     case notifications
+    /// Menu của trang Facebook (không có trên thanh — trang đã có nút ≡ riêng; chỉ dùng để nhận ra trang).
     case menu
+    /// Danh sách đoạn chat của Messenger (trang khởi động của tài khoản Messenger).
+    case chats
 
     var id: String { rawValue }
 
@@ -19,6 +23,7 @@ enum PageTab: String, CaseIterable, Identifiable, Sendable {
         case .marketplace: "Marketplace"
         case .notifications: "Thông báo"
         case .menu: "Menu"
+        case .chats: "Đoạn chat"
         }
     }
 
@@ -30,6 +35,7 @@ enum PageTab: String, CaseIterable, Identifiable, Sendable {
         case .marketplace: "storefront"
         case .notifications: "bell"
         case .menu: "line.3.horizontal"
+        case .chats: "bubble.left.and.bubble.right"
         }
     }
 
@@ -48,14 +54,14 @@ enum PageTab: String, CaseIterable, Identifiable, Sendable {
         case .marketplace: "/marketplace/"
         case .notifications: "/notifications/"
         case .menu: "/bookmarks/"
+        case .chats: "/"
         }
     }
 
-    /// Messenger đã có thanh điều hướng riêng trong trang nên không có tab dưới cùng.
     static func tabs(for kind: AccountKind) -> [PageTab] {
         switch kind {
-        case .facebook: allCases
-        case .messenger: []
+        case .facebook: [.home, .video, .friends, .marketplace, .notifications]
+        case .messenger: [.chats]
         }
     }
 

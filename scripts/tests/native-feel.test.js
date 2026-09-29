@@ -97,6 +97,47 @@ const test = async (name, fn) => { await fn(); passed += 1; console.log('  ✓',
     assert.ok(!hidden(w, '#interstitial'));
   });
 
+  await test('ẩn nút "Mở ứng dụng" (nút JavaScript) trong thanh nổi ở đáy — như ảnh chụp thật', async () => {
+    const w = await page(`<main data-top="0" data-h="2000"><article id="post"><p>Bài viết</p></article></main>
+      <div id="footer" style="position:fixed" data-top="700" data-h="96"><div><div role="button" tabindex="0"><span>Mở ứng dụng</span></div></div></div>`, { hideWebTabBar: true });
+    assert.ok(hidden(w, '#footer'));
+    assert.ok(!hidden(w, '#post'));
+  });
+
+  await test('ẩn nút "Open app" tiếng Anh', async () => {
+    const w = await page(`<div id="footer" style="position:sticky" data-top="700" data-h="80"><button>  Open   app </button></div>`, {});
+    assert.ok(hidden(w, '#footer'));
+  });
+
+  await test('KHÔNG ẩn nút "Mở ứng dụng" nằm trong nội dung bình thường', async () => {
+    const w = await page(`<article id="post" data-top="300" data-h="300"><div role="button">Mở ứng dụng</div></article>`, {});
+    assert.ok(!hidden(w, '#post'));
+    assert.strictEqual(w.__duoSocialNativeFeel.hidden.length, 0);
+  });
+
+  await test('KHÔNG ẩn thanh nổi có chữ dài chỉ nhắc tới ứng dụng', async () => {
+    const w = await page(`<div id="bar" style="position:fixed" data-top="0" data-h="60"><div role="button">Mở ứng dụng để xem thêm bình luận của bạn bè</div></div>`, {});
+    assert.ok(!hidden(w, '#bar'));
+  });
+
+  await test('KHÔNG ẩn thanh điều hướng nổi chỉ vì có nút khác', async () => {
+    const w = await page(`<div id="nav" style="position:fixed" data-top="0" data-h="56"><div role="button" aria-label="Tìm kiếm">Tìm kiếm</div><div role="button">Menu</div></div>`, {});
+    assert.ok(!hidden(w, '#nav'));
+  });
+
+  await test('quét lại ngay khi Facebook chuyển trang bằng history.pushState', async () => {
+    const w = await page(`<main data-top="0" data-h="2000"></main>`, {});
+    const footer = w.document.createElement('div');
+    footer.id = 'footer'; footer.style.position = 'fixed';
+    footer.setAttribute('data-top', '700'); footer.setAttribute('data-h', '96');
+    footer.innerHTML = '<div role="button">Mở ứng dụng</div>';
+    w.document.body.appendChild(footer);
+    w.history.pushState({}, '', '/watch/');
+    await new Promise((r) => setTimeout(r, 800));
+    assert.ok(hidden(w, '#footer'));
+    assert.strictEqual(w.location.pathname, '/watch/', 'pushState vẫn hoạt động bình thường');
+  });
+
   await test('nhận ra thanh tab được Facebook vẽ thêm sau khi trang tải (MutationObserver)', async () => {
     const w = await page(LOGO_ROW, { hideWebTabBar: true });
     const row = w.document.createElement('div');

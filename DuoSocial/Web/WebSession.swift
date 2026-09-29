@@ -55,9 +55,19 @@ final class WebSession: BrowserController {
         }
     }
 
+    /// Đang ở đúng trang khởi động (vd. danh sách đoạn chat của Messenger).
+    var isShowingStartPage: Bool {
+        guard let url = webView.url else { return false }
+        return url.host == startURL.host && url.path == startURL.path
+    }
+
     func open(_ tab: PageTab) {
         report { $0.activeTab = tab }
-        load(tab.url(base: PageTab.baseURL(current: webView.url, start: startURL)))
+        if tab == .chats {
+            loadStart()
+        } else {
+            load(tab.url(base: PageTab.baseURL(current: webView.url, start: startURL)))
+        }
     }
 
     /// Chạm lại tab/tài khoản đang mở: cuộn lên đầu, hoặc tải lại nếu đã ở đầu trang (như app Facebook).
@@ -156,7 +166,7 @@ final class WebSession: BrowserController {
     }
 
     private func urlDidChange(_ url: URL?) {
-        let tab = PageTab.matching(url)
+        let tab = kind == .messenger ? PageTab.chats : PageTab.matching(url)
         report { state in
             state.url = url
             if let tab {

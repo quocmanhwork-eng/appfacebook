@@ -30,14 +30,9 @@ struct RootView: View {
                 }
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if !model.accounts.accounts.isEmpty {
-                AccountHeader()
-            }
-        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             // Như app Facebook: ẩn thanh tab khi đang gõ để nhường chỗ cho bàn phím.
-            if let account = model.selectedAccount, !PageTab.tabs(for: account.kind).isEmpty, !isKeyboardVisible {
+            if let account = model.selectedAccount, !isKeyboardVisible {
                 PageTabBar(account: account, activeTab: model.web.state(for: account.id).activeTab)
             }
         }
@@ -47,8 +42,13 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             isKeyboardVisible = false
         }
-        .sheet(isPresented: $model.isShowingSettings) {
-            SettingsView()
+        .sheet(item: $model.activeSheet) { sheet in
+            switch sheet {
+            case .accounts:
+                AccountSwitcherView()
+            case .settings:
+                SettingsView()
+            }
         }
         .overlay {
             if model.lock.isLocked {

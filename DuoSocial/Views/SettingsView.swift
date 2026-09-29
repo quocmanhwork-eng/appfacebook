@@ -65,8 +65,8 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    TipRow(symbol: "person.crop.circle", text: "Chạm ảnh đại diện ở góc trên để chuyển tài khoản. Chạm tên tài khoản đang mở để xem thêm tùy chọn.")
-                    TipRow(symbol: "hand.point.up.left", text: "Nhấn giữ ảnh đại diện để tải lại, chỉnh sửa hoặc đăng xuất tài khoản đó.")
+                    TipRow(symbol: "person.crop.circle", text: "Chạm ảnh đại diện ở góc phải thanh dưới cùng để xem và chuyển tài khoản. Nhấn giữ để chuyển nhanh.")
+                    TipRow(symbol: "hand.point.up.left", text: "Trong danh sách tài khoản, nhấn giữ một tài khoản để tải lại, chỉnh sửa hoặc đăng xuất.")
                     TipRow(symbol: "hand.tap", text: "Chạm lại tab đang mở để cuộn lên đầu trang, chạm lần nữa để tải lại.")
                     TipRow(symbol: "arrow.left", text: "Vuốt từ mép trái màn hình để quay lại trang trước.")
                     TipRow(symbol: "link", text: "Muốn Messenger dùng luôn đăng nhập của Facebook? Mở tài khoản Messenger và chọn \"Dùng chung phiên\".")
@@ -86,7 +86,7 @@ struct SettingsView: View {
                     Text("Giới thiệu")
                 }
             }
-            .navigationTitle("Menu")
+            .navigationTitle("Cài đặt")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

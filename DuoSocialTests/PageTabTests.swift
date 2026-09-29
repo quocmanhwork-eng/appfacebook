@@ -6,9 +6,10 @@ final class PageTabTests: XCTestCase {
         URL(string: string)!
     }
 
-    func testFacebookHasSixTabsAndMessengerNone() {
-        XCTAssertEqual(PageTab.tabs(for: .facebook), [.home, .video, .friends, .marketplace, .notifications, .menu])
-        XCTAssertTrue(PageTab.tabs(for: .messenger).isEmpty)
+    func testTabsPerKind() {
+        // Tab cuối (ảnh đại diện tài khoản) do thanh tab tự thêm, không nằm trong danh sách này.
+        XCTAssertEqual(PageTab.tabs(for: .facebook), [.home, .video, .friends, .marketplace, .notifications])
+        XCTAssertEqual(PageTab.tabs(for: .messenger), [.chats])
     }
 
     func testTabURLsKeepCurrentFacebookHost() {
@@ -52,5 +53,6 @@ final class PageTabTests: XCTestCase {
     func testSelectedSymbols() {
         XCTAssertEqual(PageTab.home.selectedSymbol, "house.fill")
         XCTAssertEqual(PageTab.menu.selectedSymbol, "line.3.horizontal")
+        XCTAssertEqual(PageTab.chats.selectedSymbol, "bubble.left.and.bubble.right.fill")
     }
 }
