@@ -9,13 +9,18 @@ final class AppSettings {
         static let notificationsEnabled = "duosocial.settings.notificationsEnabled"
         static let preloadAllAccounts = "duosocial.settings.preloadAllAccounts"
         static let backgroundRefreshEnabled = "duosocial.settings.backgroundRefreshEnabled"
+        static let hideWebTabBar = "duosocial.settings.hideWebTabBar"
     }
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        defaults.register(defaults: [Keys.preloadAllAccounts: true, Keys.backgroundRefreshEnabled: true])
+        defaults.register(defaults: [
+            Keys.preloadAllAccounts: true,
+            Keys.backgroundRefreshEnabled: true,
+            Keys.hideWebTabBar: true,
+        ])
     }
 
     /// Khóa ứng dụng bằng Face ID / Touch ID / mật mã khi quay lại app.
@@ -53,6 +58,19 @@ final class AppSettings {
         set {
             withMutation(keyPath: \.backgroundRefreshEnabled) {
                 defaults.set(newValue, forKey: Keys.backgroundRefreshEnabled)
+            }
+        }
+    }
+
+    /// Ẩn thanh tab của chính trang Facebook vì app đã có thanh tab giống app Facebook.
+    var hideWebTabBar: Bool {
+        get {
+            access(keyPath: \.hideWebTabBar)
+            return defaults.bool(forKey: Keys.hideWebTabBar)
+        }
+        set {
+            withMutation(keyPath: \.hideWebTabBar) {
+                defaults.set(newValue, forKey: Keys.hideWebTabBar)
             }
         }
     }

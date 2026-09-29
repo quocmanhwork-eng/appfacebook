@@ -16,6 +16,8 @@ struct PageState: Equatable {
     var url: URL?
     /// Tab dưới cùng đang được tô sáng (giữ nguyên khi mở trang không thuộc tab nào, vd. trang cá nhân).
     var activeTab: PageTab?
+    /// Trang đã tải xong ít nhất một lần (trước đó app hiện màn hình chờ thay cho trang trắng).
+    var hasLoadedOnce = false
 }
 
 /// Quản lý các web view của tài khoản và kho dữ liệu (phiên đăng nhập) tương ứng.
@@ -29,6 +31,14 @@ final class WebSessionManager {
     @ObservationIgnored var onUnreadObserved: ((UUID, Int, Bool) -> Void)?
     @ObservationIgnored private var dataStores: [UUID: WKWebsiteDataStore] = [:]
 
+    /// Ẩn thanh tab của chính trang Facebook (app đã có thanh tab riêng). Đổi giá trị cần tạo lại web view.
+    @ObservationIgnored var hideWebTabBar = true
+
+    /// Các giá trị mà khi thay đổi thì web view của tài khoản phải được tạo lại.
+    func signature(for account: Account) -> String {
+        account.sessionSignature + "|webTabBar:" + (hideWebTabBar ? "hidden" : "shown")
+    }
+
     func session(for accountID: UUID) -> WebSession? {
         sessions[accountID]
     }
@@ -40,11 +50,18 @@ final class WebSessionManager {
     /// Tạo (nếu chưa có) web view cho tài khoản và bắt đầu tải trang.
     @discardableResult
     func ensureSession(for account: Account) -> WebSession {
-        if let existing = sessions[account.id], existing.signature == account.sessionSignature {
+        let expectedSignature = signature(for: account)
+        if let existing = sessions[account.id], existing.signature == expectedSignature {
             return existing
         }
         sessions[account.id]?.tearDown()
-        let session = WebSession(account: account, dataStore: dataStore(for: account.sessionID), manager: self)
+        let session = WebSession(
+            account: account,
+            dataStore: dataStore(for: account.sessionID),
+            signature: expectedSignature,
+            hideWebTabBar: hideWebTabBar,
+            manager: self
+        )
         sessions[account.id] = session
         pageStates[account.id] = PageState()
         session.loadStart()
@@ -53,7 +70,7 @@ final class WebSessionManager {
 
     /// Tạo lại web view nếu người dùng đổi phiên, giao diện hoặc trang khởi động.
     func refreshSessionIfNeeded(for account: Account) {
-        guard let existing = sessions[account.id], existing.signature != account.sessionSignature else { return }
+        guard let existing = sessions[account.id], existing.signature != signature(for: account) else { return }
         ensureSession(for: account)
     }
 

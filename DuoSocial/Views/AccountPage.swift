@@ -9,8 +9,15 @@ struct AccountPage: View {
     var body: some View {
         WebViewContainer(webView: session.webView)
             .overlay(alignment: .top) {
-                LoadingBar(progress: state.progress, isVisible: state.isLoading, tint: account.kind.tint)
+                LoadingBar(progress: state.progress, isVisible: state.isLoading && state.hasLoadedOnce, tint: account.kind.tint)
             }
+            .overlay {
+                if !state.hasLoadedOnce && state.loadError == nil {
+                    LoadingSplash(account: account)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: 0.25), value: state.hasLoadedOnce)
             .overlay(alignment: .bottom) {
                 if let message = state.loadError {
                     LoadErrorBanner(message: message) {
@@ -21,6 +28,27 @@ struct AccountPage: View {
                 }
             }
             .animation(.easeInOut(duration: 0.25), value: state.loadError)
+    }
+}
+
+/// Màn hình chờ lần tải đầu, thay cho trang trắng của trình duyệt.
+struct LoadingSplash: View {
+    let account: Account
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground)
+            VStack(spacing: 16) {
+                AccountAvatar(account: account, size: 72)
+                Text(account.name)
+                    .font(.headline)
+                ProgressView()
+                    .tint(account.kind.tint)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Đang mở \(account.name)")
     }
 }
 

@@ -6,12 +6,14 @@ struct PageTabBar: View {
     let activeTab: PageTab?
 
     @Environment(AppModel.self) private var model
+    @State private var tapCount = 0
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(PageTab.tabs(for: account.kind)) { tab in
                 let isActive = tab == activeTab
                 Button {
+                    tapCount += 1
                     model.openTab(tab, in: account)
                 } label: {
                     VStack(spacing: 3) {
@@ -44,5 +46,6 @@ struct PageTabBar: View {
         .overlay(alignment: .top) {
             Divider()
         }
+        .sensoryFeedback(.selection, trigger: tapCount)
     }
 }

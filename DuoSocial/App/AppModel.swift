@@ -37,6 +37,7 @@ final class AppModel {
         self.unreadBaseline = UnreadBaseline(defaults: defaults)
         self.selectedAccountID = savedID.flatMap { accounts.account(with: $0)?.id } ?? accounts.accounts.first?.id
 
+        web.hideWebTabBar = settings.hideWebTabBar
         web.onUnreadObserved = { [weak self] accountID, count, isSettling in
             self?.handleUnreadObserved(accountID: accountID, count: count, isSettling: isSettling)
         }
@@ -205,6 +206,15 @@ final class AppModel {
             scheduleBackgroundRefreshIfNeeded()
         }
         return granted
+    }
+
+    /// Đổi tùy chọn ẩn thanh tab của trang: các tài khoản đang mở sẽ được tải lại để áp dụng.
+    func setHideWebTabBar(_ hidden: Bool) {
+        settings.hideWebTabBar = hidden
+        web.hideWebTabBar = hidden
+        for account in accounts.accounts {
+            web.refreshSessionIfNeeded(for: account)
+        }
     }
 
     func setBackgroundRefreshEnabled(_ enabled: Bool) {

@@ -14,3 +14,4 @@ build/
 # Python
 __pycache__/
 .install-config
+node_modules/

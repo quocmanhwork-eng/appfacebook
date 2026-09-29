@@ -16,19 +16,25 @@ final class WebSession: BrowserController {
 
     /// Sau khi bắt đầu/kết thúc điều hướng, trang Facebook cần vài giây để cập nhật số chưa đọc trên tiêu đề.
     private static let settleInterval: TimeInterval = 6
+    /// Màn hình chờ lần tải đầu không bao giờ che trang lâu hơn khoảng này (mạng chậm, trang tải dở).
+    private static let splashTimeout: Duration = .seconds(15)
 
-    init(account: Account, dataStore: WKWebsiteDataStore, manager: WebSessionManager) {
+    init(account: Account, dataStore: WKWebsiteDataStore, signature: String, hideWebTabBar: Bool, manager: WebSessionManager) {
         accountID = account.id
         kind = account.kind
-        signature = account.sessionSignature
+        self.signature = signature
         startURL = account.startURL
         self.manager = manager
-        super.init(webView: WebViewFactory.makeWebView(for: account, dataStore: dataStore))
+        super.init(webView: WebViewFactory.makeWebView(for: account, dataStore: dataStore, hideWebTabBar: hideWebTabBar))
 
         if account.kind == .facebook {
             installRefreshControl()
         }
         startObserving()
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.splashTimeout)
+            self?.report { $0.hasLoadedOnce = true }
+        }
     }
 
     /// Trang đang tải hoặc vừa tải xong: số chưa đọc trên tiêu đề có thể tạm thời sai (thường về 0).
@@ -83,6 +89,7 @@ final class WebSession: BrowserController {
 
     override func navigationFinished() {
         lastNavigationEvent = Date()
+        report { $0.hasLoadedOnce = true }
         webView.scrollView.refreshControl?.endRefreshing()
         refreshLoginState()
         resyncUnreadAfterSettling()

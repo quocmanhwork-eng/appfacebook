@@ -18,7 +18,7 @@ class BrowserController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloa
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
-        webView.allowsLinkPreview = true
+        NativeFeel.apply(to: webView)
         #if DEBUG
         webView.isInspectable = true
         #endif

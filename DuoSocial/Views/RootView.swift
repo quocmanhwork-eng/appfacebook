@@ -58,6 +58,7 @@ struct RootView: View {
         .task {
             model.bootstrap()
         }
+        .sensoryFeedback(.selection, trigger: model.selectedAccountID)
         .onChange(of: scenePhase, initial: true) { _, phase in
             model.scenePhaseChanged(phase)
         }

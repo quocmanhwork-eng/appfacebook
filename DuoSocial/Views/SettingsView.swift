@@ -29,6 +29,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle(isOn: hideWebTabBarBinding) {
+                        Label("Ẩn thanh tab của trang Facebook", systemImage: "rectangle.topthird.inset.filled")
+                    }
+                } header: {
+                    Text("Giao diện")
+                } footer: {
+                    Text("Dùng thanh tab của app thay cho thanh tab trên trang web để giống app Facebook hơn. Nếu trang hiển thị lạ (mất nút, trống một khoảng), hãy tắt mục này. Đổi mục này sẽ tải lại các tài khoản.")
+                }
+
+                Section {
                     Toggle(isOn: lockBinding) {
                         Label("Khóa bằng \(AppLock.biometryName)", systemImage: "lock.fill")
                     }
@@ -148,6 +158,13 @@ struct SettingsView: View {
                     }
                 }
             }
+        )
+    }
+
+    private var hideWebTabBarBinding: Binding<Bool> {
+        Binding(
+            get: { model.settings.hideWebTabBar },
+            set: { model.setHideWebTabBar($0) }
         )
     }
 

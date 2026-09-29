@@ -21,6 +21,7 @@ Mỗi tài khoản hiển thị **chính trang facebook.com / messenger.com** n�
 | 🔔 **Thông báo, kể cả khi chạy nền** | Báo khi một tài khoản có thêm tin/thông báo chưa đọc, cập nhật số trên biểu tượng app. Khi app ở nền, iOS thỉnh thoảng đánh thức app để kiểm tra tin mới. |
 | 🛡️ **Khóa bằng Face ID / Touch ID** | Che toàn bộ nội dung (kể cả trong màn hình đa nhiệm). |
 | 📞 **Gọi thoại/video, gửi ảnh, tải tệp** | Cấp quyền camera/micro, mở cửa sổ gọi, lưu/chia sẻ tệp đính kèm. |
+| ✨ **Bớt "chất web"** | Màn hình chờ thay cho trang trắng, bỏ thanh "‹ › Xong" trên bàn phím, không phóng to khi chạm đúp, không vệt xám khi chạm, không xem trước link kiểu Safari, ẩn banner "Mở ứng dụng" và thanh tab trùng của trang Facebook, rung nhẹ khi chuyển tab/tài khoản. |
 | 🌐 **Link ngoài mở trong trình duyệt** | Tự bỏ trang chuyển hướng `l.facebook.com`, chặn trang web tự đẩy sang app Facebook/Messenger chính thức. |
 | 🖥️ **Chọn giao diện** | Di động / Máy tính / Máy tính vừa màn hình — cho từng tài khoản. |
 
@@ -107,6 +108,10 @@ DuoSocialTests/     Unit test cho LinkPolicy, UnreadParser, PageTab, UnreadBasel
   Facebook phục vụ bản web di động đầy đủ. Messenger mặc định dùng giao diện máy tính "vừa màn hình"
   vì bản web di động của Messenger thường bắt cài app.
 - **Trạng thái đăng nhập**: kiểm tra cookie `c_user` (ID người dùng Facebook) trong kho của phiên.
+- **Bớt "chất web"**: `DuoSocial/Web/Scripts/native-feel.js` được chèn vào đầu mỗi trang để bỏ các hiệu ứng
+  kiểu trình duyệt và ẩn banner/thanh tab trùng (chỉ ẩn khi dấu hiệu rất rõ). Nếu Facebook đổi giao diện
+  làm trang hiển thị lạ, tắt **⚙︎ → Ẩn thanh tab của trang Facebook**. Kiểm tra script:
+  `npm install --no-save jsdom@24 && node scripts/tests/native-feel.test.js`.
 - **Chống báo trùng**: số chưa đọc "đã biết" của từng tài khoản được lưu lại; chỉ báo khi số tăng. Khi trang
   đang tải lại, tiêu đề tạm về 0 nên các lần giảm trong lúc đó bị bỏ qua.
 

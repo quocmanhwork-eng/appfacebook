@@ -15,6 +15,19 @@ enum UserAgent {
 }
 
 enum UserScripts {
+    /// Script làm trang giống app hơn (DuoSocial/Web/Scripts/native-feel.js, được đóng gói vào app).
+    static let nativeFeel: String = {
+        guard let url = Bundle.main.url(forResource: "native-feel", withExtension: "js"),
+              let source = try? String(contentsOf: url, encoding: .utf8)
+        else { return "" }
+        return source
+    }()
+
+    /// Cấu hình cho native-feel.js, phải chạy trước nó.
+    static func nativeFeelConfig(hideWebTabBar: Bool) -> String {
+        "window.__duoSocialConfig = { hideWebTabBar: \(hideWebTabBar ? "true" : "false") };"
+    }
+
     /// Ép trang giao diện máy tính co giãn theo chiều rộng màn hình điện thoại.
     static let fitViewport = """
     (function () {
@@ -32,7 +45,8 @@ enum UserScripts {
 @MainActor
 enum WebViewFactory {
     /// Tạo web view cho một tài khoản. `dataStore` quyết định tài khoản dùng phiên đăng nhập nào.
-    static func makeWebView(for account: Account, dataStore: WKWebsiteDataStore) -> WKWebView {
+    /// `hideWebTabBar`: ẩn thanh tab của chính trang Facebook vì app đã có thanh tab riêng.
+    static func makeWebView(for account: Account, dataStore: WKWebsiteDataStore, hideWebTabBar: Bool) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = dataStore
         configuration.allowsInlineMediaPlayback = true
@@ -43,6 +57,15 @@ enum WebViewFactory {
         if !account.webMode.usesDesktopUserAgent {
             // Trên iPad WebKit mặc định dùng giao diện máy tính; ép về di động khi người dùng chọn.
             configuration.defaultWebpagePreferences.preferredContentMode = .mobile
+        }
+        if !UserScripts.nativeFeel.isEmpty {
+            let config = UserScripts.nativeFeelConfig(hideWebTabBar: hideWebTabBar && account.kind == .facebook)
+            configuration.userContentController.addUserScript(
+                WKUserScript(source: config, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            )
+            configuration.userContentController.addUserScript(
+                WKUserScript(source: UserScripts.nativeFeel, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            )
         }
         if account.webMode.fitsViewportToScreen {
             configuration.userContentController.addUserScript(
